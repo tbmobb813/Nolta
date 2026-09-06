@@ -184,10 +184,12 @@ export function buildChatDispatchToolSchemas(): Record<string, ProviderToolDefin
     dispatch_content_freeform: {
       name: 'dispatch_content_freeform',
       description:
-        'Hand off a general question or open-ended chat about content strategy, existing posts, or ' +
-        'ideas to the Content agent — not a request to generate one specific post or a full ' +
-        'multi-post plan (use dispatch_content_post/dispatch_content_plan for those instead). ' +
-        'Starts immediately, no approval needed.',
+        'Hand off a genuinely open-ended question about content strategy, existing posts, or ideas ' +
+        "that needs Content's own tools/memory to answer well — not a request to generate one " +
+        'specific post or a full multi-post plan (use dispatch_content_post/dispatch_content_plan ' +
+        'for those instead), and NOT a generic best-practice/how-to question you already know the ' +
+        'answer to (e.g. "how many hashtags should a post use," "what makes a good hook") — answer ' +
+        "those directly yourself, don't dispatch them. Starts immediately, no approval needed.",
       inputSchema: {
         type: 'object',
         properties: {
