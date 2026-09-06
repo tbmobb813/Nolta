@@ -31,3 +31,28 @@ describe('CONTENT_SKILL_TOOLS', () => {
     );
   });
 });
+
+describe('account field exposure', () => {
+  // Real live bug, 2026-09-06: every one of these skills/tools already
+  // supports `account` at the implementation level (see generate-post.ts,
+  // generate-plan.ts, schedule-post.ts, trendpost-mcp's content_generate/
+  // content_generate_plan handlers) — but the model can only ever pass a
+  // parameter that's actually in the schema it's shown. None of these had
+  // `account` in CONTENT_TOOL_SCHEMAS, so any freeform (non-campaign-
+  // dispatch) generate/schedule request had no way to target a specific
+  // account, silently defeating the phase 1/1.5 account-tracking work for
+  // this whole class of request.
+  const toolsThatSupportAccount = [
+    'content_generate',
+    'content_generate_plan',
+    'content_schedule_post',
+    'generate_post_skill',
+    'generate_plan_skill',
+    'schedule_post_skill',
+  ];
+
+  it.each(toolsThatSupportAccount)('%s exposes an account property in its schema', (name) => {
+    const properties = CONTENT_TOOL_SCHEMAS[name].inputSchema.properties as Record<string, unknown>;
+    expect(properties).toHaveProperty('account');
+  });
+});

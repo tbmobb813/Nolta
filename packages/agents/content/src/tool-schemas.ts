@@ -2,6 +2,22 @@ import type { ProviderToolDefinition } from '@wireassist/core';
 
 const PLATFORM_ENUM = ['twitter', 'linkedin', 'instagram', 'threads'];
 
+// Which specific brand/account a piece of content is for — see
+// generate-plan.ts's GeneratePlanInput.account for why this matters.
+// Every schema below whose underlying skill/tool already accepts `account`
+// must expose it here too, or the model has no way to ever pass it: these
+// schemas are what the model actually sees, independent of what the
+// implementation supports. Confirmed live 2026-09-06 — every one of these
+// was silently missing `account` despite full support underneath, so any
+// freeform (non-campaign-dispatch) request to generate/schedule for a
+// specific account had no way to carry that through.
+const ACCOUNT_PROPERTY = {
+  type: 'string',
+  description:
+    'Which specific brand/account this is for (e.g. "nixlevel", "techtrendwire", ' +
+    '"mindtype_studio"). Ask the user if it isn\'t clear from context rather than guessing.',
+};
+
 // LLM-facing name/description/input_schema for every tool the Content Agent
 // can be authorized to call. ContentAgent's constructor filters this down to
 // whatever's actually in config.tools — being listed here never grants
@@ -17,6 +33,7 @@ export const CONTENT_TOOL_SCHEMAS: Record<string, ProviderToolDefinition> = {
       properties: {
         topic: { type: 'string', description: 'What the post should be about.' },
         platform: { type: 'string', enum: PLATFORM_ENUM },
+        account: ACCOUNT_PROPERTY,
         tone: { type: 'string', description: 'Optional tone, e.g. "direct", "playful".' },
         context: { type: 'string', description: 'Optional business context to ground the post.' },
       },
@@ -66,6 +83,7 @@ export const CONTENT_TOOL_SCHEMAS: Record<string, ProviderToolDefinition> = {
       properties: {
         businessContext: { type: 'string' },
         platforms: { type: 'array', items: { type: 'string', enum: PLATFORM_ENUM } },
+        account: ACCOUNT_PROPERTY,
         weeksAhead: { type: 'number' },
         postsPerWeek: { type: 'number' },
       },
@@ -80,6 +98,7 @@ export const CONTENT_TOOL_SCHEMAS: Record<string, ProviderToolDefinition> = {
       properties: {
         content: { type: 'string' },
         platform: { type: 'string', enum: PLATFORM_ENUM },
+        account: ACCOUNT_PROPERTY,
         scheduledAt: { type: 'string', description: 'ISO 8601 datetime.' },
         tags: { type: 'array', items: { type: 'string' } },
         campaignId: { type: 'string' },
@@ -163,6 +182,7 @@ export const CONTENT_TOOL_SCHEMAS: Record<string, ProviderToolDefinition> = {
       properties: {
         topic: { type: 'string', description: 'What the post should be about.' },
         platform: { type: 'string', enum: PLATFORM_ENUM },
+        account: ACCOUNT_PROPERTY,
         tone: { type: 'string', description: 'Optional tone, e.g. "direct", "playful".' },
       },
       required: ['topic', 'platform'],
@@ -176,6 +196,7 @@ export const CONTENT_TOOL_SCHEMAS: Record<string, ProviderToolDefinition> = {
       type: 'object',
       properties: {
         platforms: { type: 'array', items: { type: 'string', enum: PLATFORM_ENUM } },
+        account: ACCOUNT_PROPERTY,
         weeksAhead: { type: 'number' },
         postsPerWeek: { type: 'number' },
       },
@@ -215,6 +236,7 @@ export const CONTENT_TOOL_SCHEMAS: Record<string, ProviderToolDefinition> = {
       properties: {
         content: { type: 'string' },
         platform: { type: 'string', enum: PLATFORM_ENUM },
+        account: ACCOUNT_PROPERTY,
         scheduledAt: { type: 'string', description: 'ISO 8601 datetime.' },
         tags: { type: 'array', items: { type: 'string' } },
       },
