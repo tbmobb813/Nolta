@@ -664,6 +664,29 @@ see the credentials section below).
 > via Graph API Explorer — verify a real publish there before ever using
 > production credentials.
 
+**Publishing as more than one brand/account:** WireAssist tracks which
+specific brand a scheduled post is for (`account`, e.g. `nixlevel`,
+`techtrendwire`) — see `~/context/product-service-info.md`/`brand-voice.md`
+for what those actually are. To let a brand publish through its _own_
+Instagram/Facebook credentials instead of falling back to the bare
+variables above, add account-scoped versions suffixed with `__<ACCOUNT>`
+(the account name, uppercased):
+
+```
+META_ACCESS_TOKEN__NIXLEVEL=...
+FACEBOOK_PAGE_ID__NIXLEVEL=...
+INSTAGRAM_ACCOUNT_ID__NIXLEVEL=...
+INSTAGRAM_DEFAULT_IMAGE_URL__NIXLEVEL=...
+```
+
+Repeat the full set of four per additional account you want publishing
+independently — each needs its own Facebook Page + Instagram Business
+Account connected in the Meta Developer app (steps 1-5 above, done once
+per brand). Publishing falls back to the bare `META_ACCESS_TOKEN`/etc.
+variables for any account with no scoped version set, so you don't need
+every account configured before any of them can publish — add them one at
+a time as each brand's Meta setup is ready.
+
 Add all ten variables to the `.env` heredoc in section 4 above:
 `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`,
 `TWITTER_ACCESS_SECRET`, `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_PERSON_URN`,

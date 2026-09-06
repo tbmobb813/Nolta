@@ -228,9 +228,24 @@ describe('content_publish_post', () => {
       platformPostId?: string;
     };
 
-    expect(mockPublishToPlatform).toHaveBeenCalledWith('twitter', 'hi');
+    expect(mockPublishToPlatform).toHaveBeenCalledWith('twitter', 'hi', undefined);
     expect(result.status).toBe('published');
     expect(result.platformPostId).toBe('tw-1');
+  });
+
+  it("passes the post's account through to publishToPlatform", async () => {
+    const { storage, mcp } = freshTools();
+    const post = storage.createPost({
+      content: 'hi',
+      platform: 'instagram',
+      account: 'nixlevel',
+      scheduledAt: new Date(),
+    });
+    mockPublishToPlatform.mockResolvedValue({ platformPostId: 'ig-1' });
+
+    await mcp.call('content_publish_post', { postId: post.id });
+
+    expect(mockPublishToPlatform).toHaveBeenCalledWith('instagram', 'hi', 'nixlevel');
   });
 
   it('on publisher failure, sets status failed with the error message instead of throwing', async () => {

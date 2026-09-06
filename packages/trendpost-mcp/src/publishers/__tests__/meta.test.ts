@@ -48,6 +48,38 @@ describe('postToFacebook()', () => {
 
     await expect(postToFacebook('hello')).rejects.toThrow(/Invalid OAuth access token/);
   });
+
+  it('prefers an account-scoped credential over the bare one when both exist', async () => {
+    process.env.FACEBOOK_PAGE_ID__NIXLEVEL = 'nixlevel-page';
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'fb-nixlevel' }),
+    });
+
+    await postToFacebook('hello', 'nixlevel');
+
+    const [url] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toBe('https://graph.facebook.com/v19.0/nixlevel-page/feed');
+  });
+
+  it('falls back to the bare credential when no account-scoped one is set', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'fb-fallback' }),
+    });
+
+    await postToFacebook('hello', 'techtrendwire');
+
+    const [url] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toBe('https://graph.facebook.com/v19.0/page-1/feed');
+  });
+
+  it('names the account in the error when a scoped credential is missing entirely', async () => {
+    delete process.env.FACEBOOK_PAGE_ID;
+    await expect(postToFacebook('hello', 'nixlevel')).rejects.toThrow(
+      /for account "nixlevel".*FACEBOOK_PAGE_ID__NIXLEVEL/
+    );
+  });
 });
 
 describe('postToInstagram()', () => {
@@ -106,5 +138,34 @@ describe('postToInstagram()', () => {
 
     await expect(postToInstagram('hello')).rejects.toThrow(/Invalid image URL/);
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishes through the account-scoped Instagram ID when one is set for that account', async () => {
+    process.env.INSTAGRAM_ACCOUNT_ID__NIXLEVEL = 'ig-nixlevel';
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'container-nixlevel' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'ig-media-nixlevel' }) });
+
+    await postToInstagram('hello', 'nixlevel');
+
+    const [firstUrl] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(firstUrl).toBe('https://graph.facebook.com/v19.0/ig-nixlevel/media');
+  });
+
+  it('two different accounts with their own credentials publish independently', async () => {
+    process.env.INSTAGRAM_ACCOUNT_ID__NIXLEVEL = 'ig-nixlevel';
+    process.env.INSTAGRAM_ACCOUNT_ID__TECHTRENDWIRE = 'ig-techtrendwire';
+    (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ id: 'x' }) });
+
+    await postToInstagram('post one', 'nixlevel');
+    await postToInstagram('post two', 'techtrendwire');
+
+    const urls = (global.fetch as jest.Mock).mock.calls
+      .filter((c) => c[0].endsWith('/media'))
+      .map((c) => c[0]);
+    expect(urls).toEqual([
+      'https://graph.facebook.com/v19.0/ig-nixlevel/media',
+      'https://graph.facebook.com/v19.0/ig-techtrendwire/media',
+    ]);
   });
 });

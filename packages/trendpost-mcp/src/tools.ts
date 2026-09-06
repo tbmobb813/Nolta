@@ -288,7 +288,7 @@ Return only valid JSON array. No markdown fences.`;
     if (!post) throw new Error(`No post found with id ${postId}`);
 
     try {
-      const result = await publishToPlatform(post.platform, post.content);
+      const result = await publishToPlatform(post.platform, post.content, post.account);
       storage.updatePostStatus(postId, 'published', undefined, result.platformPostId);
     } catch (err) {
       storage.updatePostStatus(postId, 'failed', err instanceof Error ? err.message : String(err));

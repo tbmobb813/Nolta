@@ -36,14 +36,22 @@ describe('publishToPlatform()', () => {
 
   it('dispatches facebook to postToFacebook only', async () => {
     await publishToPlatform('facebook', 'hi');
-    expect(postToFacebook).toHaveBeenCalledWith('hi');
+    expect(postToFacebook).toHaveBeenCalledWith('hi', undefined);
     expect(postToInstagram).not.toHaveBeenCalled();
   });
 
   it('dispatches instagram to postToInstagram only', async () => {
     await publishToPlatform('instagram', 'hi');
-    expect(postToInstagram).toHaveBeenCalledWith('hi');
+    expect(postToInstagram).toHaveBeenCalledWith('hi', undefined);
     expect(postToFacebook).not.toHaveBeenCalled();
+  });
+
+  it('threads account through to postToFacebook and postToInstagram', async () => {
+    await publishToPlatform('facebook', 'hi', 'nixlevel');
+    expect(postToFacebook).toHaveBeenCalledWith('hi', 'nixlevel');
+
+    await publishToPlatform('instagram', 'hi', 'techtrendwire');
+    expect(postToInstagram).toHaveBeenCalledWith('hi', 'techtrendwire');
   });
 
   it('throws for threads, which has no publisher', async () => {
