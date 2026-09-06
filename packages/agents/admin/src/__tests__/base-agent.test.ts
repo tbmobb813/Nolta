@@ -651,6 +651,20 @@ describe('BaseAgent.think()', () => {
     );
   });
 
+  // Real live bug, 2026-09-05: with no date anywhere in context, a plain
+  // "what's today's date?" question made Admin dispatch a full research
+  // task with a live web search just to answer it.
+  it("includes today's date in the system prompt sent to the provider", async () => {
+    const { agent } = makeAgent();
+    await agent.testThink("what is today's date?");
+    const today = new Date().toISOString().slice(0, 10);
+    expect(completeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemPrompt: expect.stringContaining(`Today's date is ${today}`),
+      })
+    );
+  });
+
   it('returns response.content directly', async () => {
     completeMock.mockResolvedValueOnce(stubResponse({ content: 'the answer' }));
     const { agent } = makeAgent();

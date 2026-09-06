@@ -260,10 +260,16 @@ export abstract class BaseAgent {
     return response.content;
   }
 
+  // Confirmed live 2026-09-05: with no date anywhere in context, a plain
+  // "what's today's date?" question made Admin dispatch a full research
+  // task with a live web search just to answer it — the model has no way
+  // to know "today" is anything but treat it as an external-lookup
+  // problem. One line here fixes it for every agent, since buildSystemPrompt
+  // is the single shared choke point think() and runToolLoop() both use.
   private buildSystemPrompt(extraContext?: string): string {
-    return extraContext
-      ? `${this.config.systemPrompt}\n\n---\nCONTEXT:\n${extraContext}`
-      : this.config.systemPrompt;
+    const dateContext = `Today's date is ${new Date().toISOString().slice(0, 10)}.`;
+    const base = `${this.config.systemPrompt}\n\n${dateContext}`;
+    return extraContext ? `${base}\n\n---\nCONTEXT:\n${extraContext}` : base;
   }
 
   private recordUsage(model: string, response: ProviderResponse): void {
