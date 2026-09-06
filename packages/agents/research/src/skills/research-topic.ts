@@ -47,14 +47,28 @@ function isLivePriceQuery(query: string): boolean {
   return PRICE_QUERY_PATTERN.test(query);
 }
 
-// First search result on a known retailer domain — the search ranking's
-// own relevance ordering is trusted here rather than re-scoring results,
-// same as the model would eyeball "the first Amazon-looking result."
+// A retailer's own on-site search/category/listing page matches
+// RETAILER_HOSTS just as trivially as an actual product page, but carries
+// no Schema.org Product JSON-LD — fetch_product_price is guaranteed to
+// fail on one. Confirmed live 2026-09-06: a "Samsung 990 Pro" price query
+// picked bestbuy.com's own searchpage.jsp (ranked first by Brave) over the
+// real /product/... URL two results later, wasting the deterministic fetch
+// on a page that could never have a price.
+const NON_PRODUCT_PATH_PATTERN = /search|browse|category/i;
+
+// First search result on a known retailer domain whose path doesn't look
+// like a search/listing page — the search ranking's own relevance
+// ordering is trusted here rather than re-scoring results, same as the
+// model would eyeball "the first Amazon-looking product page."
 function findRetailerUrl(results: BraveResult[]): string | undefined {
   for (const r of results) {
     try {
-      const host = new URL(r.url).hostname.replace(/^www\./, '');
-      if (RETAILER_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) {
+      const url = new URL(r.url);
+      const host = url.hostname.replace(/^www\./, '');
+      if (
+        RETAILER_HOSTS.some((h) => host === h || host.endsWith(`.${h}`)) &&
+        !NON_PRODUCT_PATH_PATTERN.test(url.pathname + url.search)
+      ) {
         return r.url;
       }
     } catch {
@@ -68,9 +82,11 @@ function describeLivePriceResult(product: FetchedProduct): string {
   if (!product.found) {
     return (
       `Live price check attempted on ${product.url} but failed: ` +
-      `${product.note ?? 'no structured price data found'}. Fall back to snippet-based ` +
-      `estimates below, clearly labeled as not confirmed live — do not state a snippet price ` +
-      `as current.`
+      `${product.note ?? 'no structured price data found'}. This fetch already happened and ` +
+      `is done — you have no tool access here, so do not narrate fetching it yourself or ` +
+      `propose checking a specific URL; just state plainly that a live check failed. Fall ` +
+      `back to snippet-based estimates below, clearly labeled as not confirmed live — do not ` +
+      `state a snippet price as current.`
     );
   }
   const priceText = product.price

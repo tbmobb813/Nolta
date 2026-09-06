@@ -264,6 +264,59 @@ describe('researchTopicSkill — live price fetch (deterministic, not model-depe
     expect(useTool).not.toHaveBeenCalledWith('fetch_product_price', expect.anything());
   });
 
+  it('skips a retailer search/listing page and fetches the actual product page ranked lower', async () => {
+    // Real live bug, 2026-09-06: a "Samsung 990 Pro" price query matched
+    // bestbuy.com's own on-site search page first (ranked above the real
+    // product page by Brave) — that page has no Schema.org Product data,
+    // so the deterministic fetch was wasted on a URL that could never
+    // have a price.
+    const useTool = useToolMock([
+      {
+        title: 'samsung 990 pro - Best Buy',
+        url: 'https://www.bestbuy.com/site/searchpage.jsp?id=pcat17071&st=samsung+990+pro',
+        description: 'search results',
+      },
+      {
+        title: 'Samsung 990 Pro 2TB Internal SSD',
+        url: 'https://www.bestbuy.com/product/samsung-990-pro-2tb-internal-ssd-pcle-gen-4x4-nvme/J3ZYG28J3S',
+        description: 'product page',
+      },
+    ]);
+    const agent = makeAgentHandle({ useTool });
+
+    await researchTopicSkill.execute({
+      agent,
+      task: makeTask(),
+      input: { query: 'current price of the Samsung 990 Pro 2TB' },
+    });
+
+    expect(useTool).toHaveBeenCalledWith('fetch_product_price', {
+      url: 'https://www.bestbuy.com/product/samsung-990-pro-2tb-internal-ssd-pcle-gen-4x4-nvme/J3ZYG28J3S',
+    });
+    expect(useTool).not.toHaveBeenCalledWith('fetch_product_price', {
+      url: 'https://www.bestbuy.com/site/searchpage.jsp?id=pcat17071&st=samsung+990+pro',
+    });
+  });
+
+  it('does not fetch when every retailer-host match is a search/listing page', async () => {
+    const useTool = useToolMock([
+      {
+        title: 'samsung 990 pro - Best Buy',
+        url: 'https://www.bestbuy.com/site/searchpage.jsp?id=pcat17071&st=samsung+990+pro',
+        description: 'search results',
+      },
+    ]);
+    const agent = makeAgentHandle({ useTool });
+
+    await researchTopicSkill.execute({
+      agent,
+      task: makeTask(),
+      input: { query: 'current price of the Samsung 990 Pro 2TB' },
+    });
+
+    expect(useTool).not.toHaveBeenCalledWith('fetch_product_price', expect.anything());
+  });
+
   it('tells the synthesis step to fall back to labeled estimates when the fetch fails', async () => {
     const useTool = jest.fn((toolName: string) => {
       if (toolName === 'brave_search') {
@@ -287,6 +340,14 @@ describe('researchTopicSkill — live price fetch (deterministic, not model-depe
 
     expect(agent.think).toHaveBeenCalledWith(
       expect.stringContaining('Fall back to snippet-based'),
+      undefined
+    );
+    // Real live bug, 2026-09-06: given this exact failure text, the model
+    // still narrated "I'll fetch it now, fetch_product_price(url=...)"
+    // instead of reporting the failure — it has no tool access on this
+    // path, so that narration is always fictional. Guard against it.
+    expect(agent.think).toHaveBeenCalledWith(
+      expect.stringContaining('do not narrate fetching it yourself'),
       undefined
     );
   });
